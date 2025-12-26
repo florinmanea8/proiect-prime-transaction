@@ -32,14 +32,14 @@ def get_single_stock_data(ticker):
             'Price': current_price,
             'P/E': pe_ratio,
             'P/B': pb_ratio
-        }
+            }
 
     return None
 
 def fetch_stock_data(tickers):
     stock_data = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         results = executor.map(get_single_stock_data, tickers)
 
         for result in results:
