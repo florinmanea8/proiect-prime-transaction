@@ -1,6 +1,10 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import concurrent.futures
+import time
+
+from six import ensure_text
 
 # Am configurat un buget de 100.000$ si am creat o lista cu primele 50 de companii din S&P500
 
@@ -14,31 +18,34 @@ STOCK_TICKERS = [
     'TMUS', 'TMO', 'C', 'ABT', 'AMAT'
 ]
 
+def get_single_stock_data(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+
+    pe_ratio = info.get('trailingPE', None)
+    pb_ratio = info.get('priceToBook', None)
+    current_price = info.get('currentPrice', None)
+
+    if pe_ratio and pb_ratio and current_price:
+        return {
+            'Ticker': ticker,
+            'Price': current_price,
+            'P/E': pe_ratio,
+            'P/B': pb_ratio
+        }
+
+    return None
+
 def fetch_stock_data(tickers):
     stock_data = []
-    for ticker in tickers:
-        try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
 
-            pe_ratio = info.get('trailingPE', None)
-            pb_ratio = info.get('priceToBook', None)
-            current_price = info.get('currentPrice', None)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
+        results = executor.map(get_single_stock_data, tickers)
 
-
-            if pe_ratio and pb_ratio and current_price:
-                stock_data.append({
-                    'Ticker': ticker,
-                    'Price': current_price,
-                    'P/E': pe_ratio,
-                    'P/B': pb_ratio
-                })
-                print(f"Added {ticker}: P/E={pe_ratio:.2f}, P/B={pb_ratio:.2f}, Price={current_price:.2f}")
-            else:
-                print(f"Can't add {ticker}: Missing data")
-
-        except Exception as e:
-            print(f"Can't add {ticker}: Error - {e}")
+        for result in results:
+            if result:
+                stock_data.append(result)
+                print(f"Added {result['Ticker']}, Price: ${result['Price']:.2f}, P/E: {result['P/E']:.2f}, P/B: {result['P/B']:.2f}\n")
 
     return pd.DataFrame(stock_data)
 
