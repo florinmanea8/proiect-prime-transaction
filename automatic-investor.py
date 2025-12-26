@@ -49,12 +49,28 @@ def fetch_stock_data(tickers):
 
     return pd.DataFrame(stock_data)
 
+def filter_stocks(df):
+    avg_pe = df['P/E'].mean()
+    avg_pb = df['P/B'].mean()
+
+    print(f"\nMarket Averages:")
+    print(f"    Average P/E: {avg_pe:.2f}")
+    print(f"    Average P/B: {avg_pb:.2f}")
+
+    filtered = df[(df['P/E'] < avg_pe) & (df['P/B'] < avg_pb)].copy()
+
+    print(f"\nFound {len(filtered)} undervalued stocks")
+
+    return filtered, avg_pe, avg_pb
+
 def main():
     df = fetch_stock_data(STOCK_TICKERS)
     if not df.empty:
         print(df.head())
     else:
         print("No data found")
+
+    filter_stocks(df)
 
 
 if __name__ == '__main__':
