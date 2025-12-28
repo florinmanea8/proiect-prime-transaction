@@ -187,8 +187,47 @@ def adjust_to_exact_budget(df, budget):
             if not share_added:
                 break
 
-    print(f"\nFinal Investment: ${df['Actual_Investment'].sum():,.2f}")
-    print(f"    Remaining: ${remaining:,.2f}")
+    if remaining > 0:
+        max_iterations = 1000
+        iteration = 0
+
+        while remaining > 0 and iteration < max_iterations:
+            iteration += 1
+            swap_made = False
+
+            df_sorted = df.sort_values('Weighted_Score', ascending=True)
+
+            for sell_index in df_sorted.index:
+                if df.loc[sell_index, 'Shares'] > 0:
+                    sell_price = df.loc[sell_index, 'Price']
+                    potential_budget = remaining + sell_price
+
+                    df_buy_candidates = df.sort_values('Weighted_Score', ascending=False)
+
+                    for buy_index in df_buy_candidates.index:
+                        buy_price = df.loc[buy_index, 'Price']
+
+                        if buy_price <= potential_budget:
+                            new_remaining = potential_budget - buy_price
+
+                            if new_remaining < remaining:
+                                df.loc[sell_index, 'Shares'] -= 1
+                                df.loc[sell_index, 'Actual_Investment'] -= sell_price
+                                df.loc[sell_index, 'Shares'] += 1
+                                df.loc[sell_index, 'Actual_Investment'] += buy_price
+                                remaining = new_remaining
+                                swap_made = True
+                                break
+                    if swap_made:
+                        break
+            if not swap_made:
+                break
+
+    final_total = df['Actual_Investment'].sum()
+    final_remaining = budget - final_total
+
+    print(f"\nFinal Investment: ${final_total:,.2f}")
+    print(f"    Remaining: ${final_remaining:,.2f}")
 
     return df, remaining
 
@@ -244,8 +283,6 @@ def display_results(df):
 def main():
     print("Stock Portfolio Allocation Calculator")
     print(f"Budget: ${BUDGET:,.2f}")
-    print(f"Weight exponent: {WEIGHT_EXPONENT}")
-    print(f"Category multipliers: {CATEGORY_MULTIPLIERS}\n")
 
     df = fetch_stock_data(STOCK_TICKERS)
 
