@@ -102,6 +102,29 @@ def classify_stock_type(df, avg_pe, avg_pb):
 
     return df
 
+def calculate_raw_scores(df, avg_pe, avg_pb):
+    df = classify_stock_type(df, avg_pe, avg_pb)
+    df['PE_Distance'] = avg_pe - df['P/E']
+    df['PB_Distance'] = avg_pb - df['P/B']
+
+    df['Base_Score'] = df['PE_Distance'] + df['PB_Distance']
+
+    df['Category_Multiplier'] = df['Valuation_Type'].map(CATEGORY_MULTIPLIERS)
+    df['Raw_Score'] = df['Base_Score'] * df['Category_Multiplier']
+
+    return df
+
+def normalize_scores(df):
+    min_score = df['Base_Score'].min()
+    if min_score < 0:
+        df['Adjusted_Score'] = df['Raw_Score'] - min_score + 1
+    else:
+        df['Adjusted_Score'] = df['Raw_Score'] + 1
+
+    df['Weighted_Score'] = df['Adjusted_Score'] ** WEIGHT_EXPONENT
+
+    return df
+
 def main():
     df = fetch_stock_data(STOCK_TICKERS)
     if df.empty:
@@ -112,10 +135,13 @@ def main():
 
     df = classify_stock_type(df, avg_pe, avg_pb)
 
+    df = calculate_raw_scores(df, avg_pe, avg_pb)
+    df = normalize_scores(df)
+
     pd.set_option('display.max_rows', None)
     pd.set_option('display.width', 1000)
 
-    display_cols = ['Ticker', 'Price', 'P/E', 'P/B', 'Valuation_Type']
+    display_cols = ['Ticker', 'Price', 'P/E', 'P/B', 'Valuation_Type', 'Adjusted_Score', 'Weighted_Score']
     print(df[display_cols])
 
 if __name__ == '__main__':
