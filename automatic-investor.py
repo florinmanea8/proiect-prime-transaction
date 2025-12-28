@@ -55,7 +55,9 @@ def fetch_stock_data(tickers):
         for result in results:
             if result:
                 stock_data.append(result)
-                print(f"Added {result['Ticker']}, Price: ${result['Price']:.2f}, P/E: {result['P/E']:.2f}, P/B: {result['P/B']:.2f}")
+                print(f"✓ Added {result['Ticker']}, Price: ${result['Price']:.2f}, P/E: {result['P/E']:.2f}, P/B: {result['P/B']:.2f}")
+            else:
+                print(f"✗ Can't add {resul['Ticker']}: Missing Data")
 
     return pd.DataFrame(stock_data)
 
@@ -63,7 +65,7 @@ def calculate_market_averages(df):
     avg_pe = df['P/E'].mean()
     avg_pb = df['P/B'].mean()
 
-    print(f"\nMarket Averages:")
+    print(f"\n📊 Market Averages:")
     print(f"    Average P/E: {avg_pe:.2f}")
     print(f"    Average P/B: {avg_pb:.2f}")
 
@@ -85,20 +87,18 @@ def get_classification(row, avg_pe, avg_pb):
 def classify_stock_type(df, avg_pe, avg_pb):
     df['Valuation_Type'] = df.apply(lambda row: get_classification(row, avg_pe, avg_pb), axis=1)
 
-    print("\nStock Classification:")
+    print("\nc Stock Classification:")
     for val_type, multiplier in CATEGORY_MULTIPLIERS.items():
         count = len(df[df['Valuation_Type'] == val_type])
 
         type_name = {
-            'both_undervalued': "Both P/E and P/B are Undervalued",
-            'pe_undervalued': "P/E Undervalued, P/B Overvalued",
-            'pb_undervalued': "P/E Overvalued, P/B Undervalued",
-            'both_overvalued': "Both P/E and P/B are Overvalued"
+            'both_undervalued': "✅ Both P/E and P/B are Undervalued",
+            'pe_undervalued': "⚠️ P/E Undervalued, P/B Overvalued",
+            'pb_undervalued': "⚠️ P/E Overvalued, P/B Undervalued",
+            'both_overvalued': "❌ Both P/E and P/B are Overvalued"
         }[val_type]
 
         print(f"    {type_name}: {count} stocks (multiplier: {multiplier}x)")
-
-    print('')
 
     return df
 
@@ -139,10 +139,10 @@ def calculate_allocation_amounts(df, budget):
 
 def categorize_stocks(df, avg_pe):
     category_map = {
-        'both_undervalued': "Both Undervalued (Best)",
-        'pe_undervalued': "P/E Undervalued",
-        'pb_undervalued': "P/B Undervalued",
-        'both_overvalued': "Both Overvalued (Worst)"
+        'both_undervalued': "🌟 Both Undervalued",
+        'pe_undervalued': "✅ P/E Undervalued",
+        'pb_undervalued': "✅ P/B Undervalued",
+        'both_overvalued': "❌ Both Overvalued"
     }
 
     df['Category'] = df['Valuation_Type'].map(category_map)
@@ -165,9 +165,6 @@ def calculate_scores_and_allocation(df, budget):
 def adjust_to_exact_budget(df, budget):
     total_invested = df['Actual_Investment'].sum()
     remaining = budget - total_invested
-
-    print(f"\nInitial Invested: ${total_invested:,.2f}")
-    print(f"    Remaining: ${remaining:,.2f}")
 
     if remaining > 0:
         while remaining > 0:
@@ -226,23 +223,28 @@ def adjust_to_exact_budget(df, budget):
     final_total = df['Actual_Investment'].sum()
     final_remaining = budget - final_total
 
-    print(f"\nFinal Investment: ${final_total:,.2f}")
+    print(f"\n💰 Final Investment: ${final_total:,.2f}")
     print(f"    Remaining: ${final_remaining:,.2f}")
+
+    if final_remaining == 0:
+        print("    🎯 Perfect! Exactly $0 remaining!")
+    elif final_remaining < 1:
+        print("    ⚠️ Unable to reach exactly $0 (closest possible with whole shares)")
 
     return df, remaining
 
 def display_results(df):
     print("\n" + "="*90)
-    print("FINAL PORTFOLIO ALLOCATION")
+    print("📈 FINAL PORTFOLIO ALLOCATION")
     print("="*90)
 
     df_display = df.sort_values('Actual_Investment', ascending=False)
 
     categories = [
-        'Both Undervalued (Best)',
-        'P/E Undervalued',
-        'P/B Undervalued',
-        'Both Overvalued (Worst)'
+        '🌟 Both Undervalued',
+        '✅ P/E Undervalued',
+        '✅ P/B Undervalued',
+        '❌ Both Overvalued'
     ]
 
     for category in categories:
@@ -252,7 +254,7 @@ def display_results(df):
             category_total = stocks_in_category['Actual_Investment'].sum()
             category_pct = (category_total / df['Actual_Investment'].sum()) * 100
 
-            print(f"\n{category} - ${category_pct:,.2f} ({category_pct:.1f}%)")
+            print(f"\n{category} - ${category_total:,.2f} ({category_pct:.1f}%)")
             print("-" * 90)
 
             for _, row in stocks_in_category.iterrows():
@@ -264,16 +266,16 @@ def display_results(df):
                       f"({row['Allocation_Pct']*100:5.2f}%)")
 
     print("\n" + "="*90)
-    print(f"TOTAL INVESTED: ${df['Actual_Investment'].sum():,.2f}")
-    print(f"Number of stocks in portfolio: {len(df[df['Shares'] > 0])}")
+    print(f"💰 TOTAL INVESTED: ${df['Actual_Investment'].sum():,.2f}")
+    print(f"📋 Number of stocks in portfolio: {len(df[df['Shares'] > 0])}")
     print("="*90)
 
-    print("\nPortfolio Breakdown by Category:")
+    print("\n📊 Portfolio Breakdown by Category:")
     for val_type, category_name in [
-        ('both_undervalued', 'Both Undervalued (Best)'),
-        ('pe_undervalued', 'P/E Undervalued'),
-        ('pb_undervalued', 'P/B Undervalued'),
-        ('both_overvalued', 'Both Overvalued (Worst)')
+        ('both_undervalued', '🌟 Both Undervalued'),
+        ('pe_undervalued', '✅ P/E Undervalued'),
+        ('pb_undervalued', '✅ P/B Undervalued'),
+        ('both_overvalued', '❌ Both Overvalued')
     ]:
         amount = df[df['Valuation_Type'] == val_type]['Actual_Investment'].sum()
         pct = (amount / df['Actual_Investment'].sum()) * 100
@@ -281,13 +283,13 @@ def display_results(df):
         print(f"    {category_name}: ${amount:,.2f} ({pct:.1f}%) across {count} stocks")
 
 def main():
-    print("Stock Portfolio Allocation Calculator")
-    print(f"Budget: ${BUDGET:,.2f}")
+    print("🚀 Stock Portfolio Allocation Calculator")
+    print(f"\nBudget: ${BUDGET:,.2f}\n")
 
     df = fetch_stock_data(STOCK_TICKERS)
 
     if len(df) == 0:
-        print("No stock data available")
+        print("❌ No stock data available")
         return
 
     allocated_df, avg_pe, avg_pb = calculate_scores_and_allocation(df, BUDGET)
@@ -297,7 +299,7 @@ def main():
     display_results(final_df)
 
     final_df.to_csv('portfolio_allocation.csv', index=False)
-    print("\nResults saved to 'portfolio_allocation.csv'")
+    print("\n💾 Results saved to 'portfolio_allocation.csv'")
 
 
 if __name__ == '__main__':
