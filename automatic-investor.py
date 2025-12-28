@@ -4,10 +4,6 @@ import numpy as np
 import concurrent.futures
 import time
 
-from six import ensure_text
-
-# Am configurat un buget de 100.000$ si am creat o lista cu primele 50 de companii din S&P500
-
 BUDGET = 100000
 
 STOCK_TICKERS = [
