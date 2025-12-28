@@ -170,17 +170,21 @@ def adjust_to_exact_budget(df, budget):
     print(f"    Remaining: ${remaining:,.2f}")
 
     if remaining > 0:
-        df_sorted = df.sort_values('Weighted_Score', ascending=False)
+        while remaining > 0:
+            df_sorted = df.sort_values('Weighted_Score', ascending=False)
+            share_added = False
 
-        for index in df_sorted.index:
-            stock_price = df.loc[index, 'Price']
+            for index in df_sorted.index:
+                stock_price = df.loc[index, 'Price']
 
-            if remaining >= stock_price:
-                df.loc[index, 'Shares'] += 1
-                df.loc[index, 'Actual_Investment'] += stock_price
-                remaining -= stock_price
+                if remaining >= stock_price:
+                    df.loc[index, 'Shares'] += 1
+                    df.loc[index, 'Actual_Investment'] += stock_price
+                    remaining -= stock_price
+                    share_added = True
+                    break
 
-            if remaining < df['Price'].min():
+            if not share_added:
                 break
 
     print(f"\nFinal Investment: ${df['Actual_Investment'].sum():,.2f}")
@@ -238,7 +242,26 @@ def display_results(df):
         print(f"    {category_name}: ${amount:,.2f} ({pct:.1f}%) across {count} stocks")
 
 def main():
-    
+    print("Stock Portfolio Allocation Calculator")
+    print(f"Budget: ${BUDGET:,.2f}")
+    print(f"Weight exponent: {WEIGHT_EXPONENT}")
+    print(f"Category multipliers: {CATEGORY_MULTIPLIERS}\n")
+
+    df = fetch_stock_data(STOCK_TICKERS)
+
+    if len(df) == 0:
+        print("No stock data available")
+        return
+
+    allocated_df, avg_pe, avg_pb = calculate_scores_and_allocation(df, BUDGET)
+
+    final_df, remaining = adjust_to_exact_budget(allocated_df, BUDGET)
+
+    display_results(final_df)
+
+    final_df.to_csv('portfolio_allocation.csv', index=False)
+    print("\nResults saved to 'portfolio_allocation.csv'")
+
 
 if __name__ == '__main__':
     main()
