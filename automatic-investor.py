@@ -2,7 +2,6 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import concurrent.futures
-import time
 
 BUDGET = 100000
 
@@ -53,7 +52,7 @@ def fetch_stock_data(tickers):
                 stock_data.append(result)
                 print(f"✓ Added {result['Ticker']}, Price: ${result['Price']:.2f}, P/E: {result['P/E']:.2f}, P/B: {result['P/B']:.2f}")
             else:
-                print(f"✗ Can't add {resul['Ticker']}: Missing Data")
+                print(f"✗ Can't add {result['Ticker']}: Missing Data")
 
     return pd.DataFrame(stock_data)
 
@@ -133,7 +132,7 @@ def calculate_allocation_amounts(df, budget):
 
     return df
 
-def categorize_stocks(df, avg_pe):
+def categorize_stocks(df):
     category_map = {
         'both_undervalued': "🌟 Both Undervalued",
         'pe_undervalued': "✅ P/E Undervalued",
@@ -154,7 +153,7 @@ def calculate_scores_and_allocation(df, budget):
 
     df = calculate_allocation_amounts(df, budget)
 
-    df = categorize_stocks(df, avg_pe)
+    df = categorize_stocks(df)
 
     return df, avg_pe, avg_pb
 
