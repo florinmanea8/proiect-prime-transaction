@@ -125,6 +125,43 @@ def normalize_scores(df):
 
     return df
 
+def calculate_allocation_amounts(df, budget):
+    total_weighted_score = df['Weighted_Score'].sum()
+    df['Allocation_Pct'] = df['Weighted_Score'] / total_weighted_score
+
+    df['Allocation_$'] = df ['Allocation_Pct'] * budget
+
+    df['Shares'] = np.floor(df['Allocation_$'] / df['Price'])
+
+    df['Actual_Investment'] = df['Shares'] * df['Price']
+
+    return df
+
+def categorize_stocks(df, avg_pe):
+    category_map = {
+        'both_undervalued': "Both Undervalued (Best)",
+        'pe_undervalued': "P/E Undervalued",
+        'pb_undervalued': "P/B Undervalued",
+        'both_overvalued': "Both Overvalued (Worst)"
+    }
+
+    df['Category'] = df['Valuation_Type'].map(category_map)
+
+    return df
+
+def calculate_scores_and_allocation(df, budget):
+    avg_pe, avg_pb = calculate_market_averages(df)
+
+    df = calculate_raw_scores(df, avg_pe, avg_pb)
+
+    df = normalize_scores(df)
+
+    df = calculate_allocation_amounts(df, budget)
+
+    df = categorize_stocks(df, avg_pe)
+
+    return df, avg_pe, avg_pb
+
 def main():
     df = fetch_stock_data(STOCK_TICKERS)
     if df.empty:
