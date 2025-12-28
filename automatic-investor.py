@@ -162,6 +162,32 @@ def calculate_scores_and_allocation(df, budget):
 
     return df, avg_pe, avg_pb
 
+def adjust_to_exact_budget(df, budget):
+    total_invested = df['Actual_Investment'].sum()
+    remaining = budget - total_invested
+
+    print(f"\nInitial Invested: ${total_invested:,.2f}")
+    print(f"    Remaining: ${remaining:,.2f}")
+
+    if remaining > 0:
+        df_sorted = df.sort_values('Weighted_Score', ascending=False)
+
+        for index in df_sorted.index:
+            stock_price = df.loc[index, 'Price']
+
+            if remaining >= stock_price:
+                df.loc[index, 'Shares'] += 1
+                df.loc[index, 'Actual_Investment'] += stock_price
+                remaining -= stock_price
+
+            if remaining < df['Price'].min():
+                break
+
+    print(f"\nFinal Investment: ${df['Actual_Investment'].sum():,.2f}")
+    print(f"    Remaining: ${remaining:,.2f}")
+
+    return df, remaining
+
 def main():
     df = fetch_stock_data(STOCK_TICKERS)
     if df.empty:
