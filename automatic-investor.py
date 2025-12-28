@@ -188,24 +188,57 @@ def adjust_to_exact_budget(df, budget):
 
     return df, remaining
 
+def display_results(df):
+    print("\n" + "="*90)
+    print("FINAL PORTFOLIO ALLOCATION")
+    print("="*90)
+
+    df_display = df.sort_values('Actual_Investment', ascending=False)
+
+    categories = [
+        'Both Undervalued (Best)',
+        'P/E Undervalued',
+        'P/B Undervalued',
+        'Both Overvalued (Worst)'
+    ]
+
+    for category in categories:
+        stocks_in_category = df_display[df_display['Category'] == category]
+
+        if len(stocks_in_category) > 0:
+            category_total = stocks_in_category['Actual_Investment'].sum()
+            category_pct = (category_total / df['Actual_Investment'].sum()) * 100
+
+            print(f"\n{category} - ${category_pct:,.2f} ({category_pct:.1f}%)")
+            print("-" * 90)
+
+            for _, row in stocks_in_category.iterrows():
+                print(f"{row['Ticker']:6} | ${row['Price']:8.2f}/share | "
+                      f"P/E: {row['P/E']:6.2f} | P/B: {row['P/B']:6.2f} | "
+                      f"Score: {row['Raw_Score']:7.2f}")
+                print(f"        | Shares {int(row['Shares']):4} | "
+                      f"Invested: ${row['Actual_Investment']:10,.2f} "
+                      f"({row['Allocation_Pct']*100:5.2f}%)")
+
+    print("\n" + "="*90)
+    print(f"TOTAL INVESTED: ${df['Actual_Investment'].sum():,.2f}")
+    print(f"Number of stocks in portfolio: {len(df[df['Shares'] > 0])}")
+    print("="*90)
+
+    print("\nPortfolio Breakdown by Category:")
+    for val_type, category_name in [
+        ('both_undervalued', 'Both Undervalued (Best)'),
+        ('pe_undervalued', 'P/E Undervalued'),
+        ('pb_undervalued', 'P/B Undervalued'),
+        ('both_overvalued', 'Both Overvalued (Worst)')
+    ]:
+        amount = df[df['Valuation_Type'] == val_type]['Actual_Investment'].sum()
+        pct = (amount / df['Actual_Investment'].sum()) * 100
+        count = len(df[df['Valuation_Type'] == val_type])
+        print(f"    {category_name}: ${amount:,.2f} ({pct:.1f}%) across {count} stocks")
+
 def main():
-    df = fetch_stock_data(STOCK_TICKERS)
-    if df.empty:
-        print("No data available")
-        return
-
-    avg_pe, avg_pb = calculate_market_averages(df)
-
-    df = classify_stock_type(df, avg_pe, avg_pb)
-
-    df = calculate_raw_scores(df, avg_pe, avg_pb)
-    df = normalize_scores(df)
-
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.width', 1000)
-
-    display_cols = ['Ticker', 'Price', 'P/E', 'P/B', 'Valuation_Type', 'Adjusted_Score', 'Weighted_Score']
-    print(df[display_cols])
+    
 
 if __name__ == '__main__':
     main()
