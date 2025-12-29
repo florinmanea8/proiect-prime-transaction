@@ -3,8 +3,9 @@ import pandas as pd
 import numpy as np
 import concurrent.futures
 
-BUDGET = 100000
+BUDGET = 100000 # Total money to invest
 
+# Stocks to analyze (top 50 from S&P 500)
 STOCK_TICKERS = [
     'NVDA', 'AAPL', 'MSFT', 'AMZN', 'GOOGL', 'GOOG', 'META', 'AVGO',
     'TSLA', 'BRK-B', 'LLY', 'JPM', 'WMT', 'V', 'ORCL', 'MA', 'XOM',
@@ -14,8 +15,9 @@ STOCK_TICKERS = [
     'TMUS', 'TMO', 'C', 'ABT', 'AMAT'
 ]
 
-WEIGHT_EXPONENT = 3
+WEIGHT_EXPONENT = 3 # How much we will favor good stocks
 
+# Multiplier for each category of stocks
 CATEGORY_MULTIPLIERS = {
     'both_undervalued': 2.0,
     'pe_undervalued': 1.2,
@@ -23,6 +25,7 @@ CATEGORY_MULTIPLIERS = {
     'both_overvalued': 1.0
 }
 
+# Function to fetch data for one stock
 def get_single_stock_data(ticker):
     stock = yf.Ticker(ticker)
     info = stock.info
@@ -41,6 +44,7 @@ def get_single_stock_data(ticker):
 
     return None
 
+# Function to fetch data for all stocks in parallel
 def fetch_stock_data(tickers):
     stock_data = []
 
@@ -56,6 +60,7 @@ def fetch_stock_data(tickers):
 
     return pd.DataFrame(stock_data)
 
+# Function to calculate P/E and P/B market averages
 def calculate_market_averages(df):
     avg_pe = df['P/E'].mean()
     avg_pb = df['P/B'].mean()
@@ -66,6 +71,7 @@ def calculate_market_averages(df):
 
     return avg_pe, avg_pb
 
+# Function to classify every stock into one of the 4 categories listed in the beginning
 def get_classification(row, avg_pe, avg_pb):
     pe_under = row['P/E'] < avg_pe
     pb_under = row['P/B'] < avg_pb
@@ -79,6 +85,7 @@ def get_classification(row, avg_pe, avg_pb):
     else:
         return 'both_overvalued'
 
+# Function to show how many stocks we have of each type
 def classify_stock_type(df, avg_pe, avg_pb):
     df['Valuation_Type'] = df.apply(lambda row: get_classification(row, avg_pe, avg_pb), axis=1)
 
@@ -96,7 +103,7 @@ def classify_stock_type(df, avg_pe, avg_pb):
         print(f"    {type_name}: {count} stocks (multiplier: {multiplier}x)")
 
     return df
-
+# Function to calculate which stocks are better than the others in the same category and then we apply the multiplier
 def calculate_raw_scores(df, avg_pe, avg_pb):
     df = classify_stock_type(df, avg_pe, avg_pb)
     df['PE_Distance'] = avg_pe - df['P/E']
@@ -108,7 +115,7 @@ def calculate_raw_scores(df, avg_pe, avg_pb):
     df['Raw_Score'] = df['Base_Score'] * df['Category_Multiplier']
 
     return df
-
+# Raises the scores to the power of 3 so we can have a bigger gap between stocks and invest more in the better ones
 def normalize_scores(df):
     min_score = df['Base_Score'].min()
     if min_score < 0:
@@ -120,6 +127,7 @@ def normalize_scores(df):
 
     return df
 
+# Here we calculate how many whole shares we can buy for each stock in our dataframe
 def calculate_allocation_amounts(df, budget):
     total_weighted_score = df['Weighted_Score'].sum()
     df['Allocation_Pct'] = df['Weighted_Score'] / total_weighted_score
@@ -132,6 +140,7 @@ def calculate_allocation_amounts(df, budget):
 
     return df
 
+# Converting the categories to something easier to read and display
 def categorize_stocks(df):
     category_map = {
         'both_undervalued': "🌟 Both Undervalued",
@@ -144,6 +153,7 @@ def categorize_stocks(df):
 
     return df
 
+# Here is where we're calling the other functions in order so we can have the main() function cleaner
 def calculate_scores_and_allocation(df, budget):
     avg_pe, avg_pb = calculate_market_averages(df)
 
@@ -157,6 +167,8 @@ def calculate_scores_and_allocation(df, budget):
 
     return df, avg_pe, avg_pb
 
+# Here we make sure we invest the whole amount of money and we have minimal to no money left in our budget.
+# Sometimes the algorithm can't find a way to invest exactly the whole amount in good stocks so we may have some cents left
 def adjust_to_exact_budget(df, budget):
     total_invested = df['Actual_Investment'].sum()
     remaining = budget - total_invested
@@ -228,6 +240,7 @@ def adjust_to_exact_budget(df, budget):
 
     return df, remaining
 
+# Here we are displaying the whole dataframe and informations easy to read
 def display_results(df):
     print("\n" + "="*90)
     print("📈 FINAL PORTFOLIO ALLOCATION")
@@ -277,6 +290,8 @@ def display_results(df):
         count = len(df[df['Valuation_Type'] == val_type])
         print(f"    {category_name}: ${amount:,.2f} ({pct:.1f}%) across {count} stocks")
 
+# Main functions that makes the main big operations
+# Finally saves the whole dataframe as a .csv file that can be opened in Excel
 def main():
     print("🚀 Stock Portfolio Allocation Calculator")
     print(f"\nBudget: ${BUDGET:,.2f}\n")
